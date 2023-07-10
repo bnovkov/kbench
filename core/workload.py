@@ -14,10 +14,12 @@ from itertools import chain
 from core.benchmark import BenchmarkRegistry, BenchmarkBase
 from core.metric import MetricRegistry, SysctlMetric
 
+import util.os
 import util.runners as runners
 import core.schemas.workload_conf
 
 from util.structs import DictObj
+
 
 class Workload:
     def __init__(self, configPath: str) -> None:
@@ -27,7 +29,7 @@ class Workload:
         v = cerberus.Validator(core.schemas.workload_conf.schema)
 
         if not v.validate(config):
-                raise ValueError(f"invalid workload configuration: {v.errors}")
+            raise ValueError(f"invalid workload configuration: {v.errors}")
 
         config = v.normalized(config)
 
@@ -39,7 +41,7 @@ class Workload:
 
 
 class WorkloadRegistry:
-    workloads : Dict[str, Workload] = dict()
+    workloads: Dict[str, Workload] = dict()
     targetBenchmarks: Set[BenchmarkBase] = set()
 
     @staticmethod
@@ -67,14 +69,19 @@ class WorkloadRegistry:
         sema = Semaphore(1)
         tq: list[(Thread, Event)] = []
 
+        ncpu = util.os.sysctl("hw.ncpu")
+        log.debug(f"Number of CPUs: {ncpu}")
+
         def pausedProc(target, sema, args, kwargs):
             sema.acquire()
             f = open(os.devnull, "w")
             sys.stdout = f
             target(*args, **kwargs)
 
-        def samplingThread(sysctls: List[SysctlMetric], samplingRateMs : int, stop: Event) -> None:
-            while not stop.wait(samplingRateMs / 1000.):
+        def samplingThread(
+            sysctls: List[SysctlMetric], samplingRateMs: int, stop: Event
+        ) -> None:
+            while not stop.wait(samplingRateMs / 1000.0):
                 for s in sysctls:
                     s.sample()
 
@@ -85,10 +92,7 @@ class WorkloadRegistry:
             diffSysctls = MetricRegistry.getSysctls("diff")
             monitorSysctls = MetricRegistry.getSysctls("monitor")
             monitorSysctlsGrouped = {}
-            runResults = {
-                "sysctl" : {},
-                "dtrace" : {}
-            }
+            runResults = {"sysctl": {}, "dtrace": {}}
 
             for s in monitorSysctls:
                 if s.config.sampling_rate not in monitorSysctlsGrouped:
@@ -111,6 +115,7 @@ class WorkloadRegistry:
                             sema,
                             [w.run_args],
                             {
+                                "ncpu": ncpu,
                                 "envvar": benchmark.run.env,
                                 "rootdir": benchmark.files.rootdir,
                                 "silent": True,
@@ -133,12 +138,14 @@ class WorkloadRegistry:
 
             # Create threads for monitoring sysctls
             if len(monitorSysctlsGrouped) != 0:
-                for k,v in monitorSysctlsGrouped.items():
+                for k, v in monitorSysctlsGrouped.items():
                     e = Event()
-                    t = Thread(target=samplingThread, args=(v, v[0].config.sampling_rate, e))
+                    t = Thread(
+                        target=samplingThread, args=(v, v[0].config.sampling_rate, e)
+                    )
                     tq.append((t, e))
 
-                for t,_ in tq:
+                for t, _ in tq:
                     t.start()
 
             sema.release()
@@ -147,10 +154,10 @@ class WorkloadRegistry:
 
             # Signal the monitoring threads to stop
             if len(monitorSysctlsGrouped) != 0:
-                for _,e in tq:
+                for _, e in tq:
                     e.set()
 
-                for t,_ in tq:
+                for t, _ in tq:
                     t.join()
 
             # Sample sysctl after the process finished
@@ -164,4 +171,3 @@ class WorkloadRegistry:
             results[w.name] = runResults
 
         return results
-

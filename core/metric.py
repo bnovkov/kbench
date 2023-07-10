@@ -9,6 +9,7 @@ import util.os
 
 from util.structs import DictObj
 
+
 class Metric:
     def __init__(self):
         self.values: List[int] = list()
@@ -19,8 +20,8 @@ class Metric:
     def sample(self):
         pass
 
-class SysctlMetric(Metric):
 
+class SysctlMetric(Metric):
     def __init__(self, configDict) -> None:
         super().__init__()
         self.config = DictObj(**configDict)
@@ -31,9 +32,7 @@ class SysctlMetric(Metric):
         log.debug(f"Sampled sysctl '{self.config.oid}'")
 
 
-
 class MetricRegistry:
-
     sysctls: List[SysctlMetric]
 
     @staticmethod

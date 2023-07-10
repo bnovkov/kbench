@@ -3,7 +3,7 @@ import subprocess
 import logging as log
 
 
-def make(*args, envvar=None, rootdir=None, silent=False):
+def make(*args, ncpu=1, envvar=None, rootdir=None, silent=False):
     log.debug("env: %s, rootdir: %s", str(envvar), str(rootdir))
     stdout = None
 
@@ -13,4 +13,4 @@ def make(*args, envvar=None, rootdir=None, silent=False):
     if silent:
         stdout = subprocess.DEVNULL
 
-    subprocess.run(["make", *args], env=envvar, stdout=stdout)
+    subprocess.run(["make", f"-j{ncpu}", *args], env=envvar, stdout=stdout)

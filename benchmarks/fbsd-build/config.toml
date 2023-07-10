@@ -6,7 +6,7 @@ description = "Benchmarking buildworld and buildkernel"
 rootdir = "usr/src"
 [files.fetch]
 filename = "src.txz"
-url = "https://download.freebsd.org/ftp/releases/amd64/13.2-RELEASE/src.txz"
+url = "https://download.freebsd.org/ftp/releases/amd64/13.1-RELEASE/src.txz"
 
 
 [run]

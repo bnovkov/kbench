@@ -12,7 +12,7 @@ from core.metric import MetricRegistry
 
 from core.config import RunConfig
 
-coloredlogs.install(level="DEBUG")
+coloredlogs.install(level="INFO")
 
 parser = argparse.ArgumentParser()
 requiredArgs = parser.add_argument_group("required arguments")
@@ -26,6 +26,9 @@ parser.add_argument(
 parser.add_argument("-v", "--verbose", action="store_true", help="increase verbosity")
 
 args = parser.parse_args()
+
+if args.verbose:
+    coloredlogs.install(level="DEBUG")
 
 try:
     config = RunConfig(args)
