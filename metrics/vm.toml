@@ -1,0 +1,6 @@
+[[sysctl]]
+oid = "vm.pmap.pde.promotions"
+#mode = "diff"
+mode = "monitor"
+sampling_rate = 1000
+

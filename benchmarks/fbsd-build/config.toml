@@ -1,0 +1,15 @@
+[info]
+name = "freebsd-src"
+description = "Benchmarking buildworld and buildkernel"
+
+[files]
+rootdir = "usr/src"
+[files.fetch]
+filename = "src.txz"
+url = "https://download.freebsd.org/ftp/releases/amd64/13.2-RELEASE/src.txz"
+
+
+[run]
+runner = "make"
+tmpfiledir = "build"
+env = { "MAKEOBJDIRPREFIX" = "{{ bench.run.tmpfiledir }}" }
