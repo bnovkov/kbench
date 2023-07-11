@@ -77,6 +77,7 @@ class WorkloadRegistry:
             f = open(os.devnull, "w")
             sys.stdout = f
             target(*args, **kwargs)
+            sema.release()
 
         def samplingThread(
             sysctls: List[SysctlMetric], samplingRateMs: int, stop: Event
@@ -99,75 +100,83 @@ class WorkloadRegistry:
                     monitorSysctlsGrouped[s.config.sampling_rate] = []
 
                 monitorSysctlsGrouped[s.config.sampling_rate].append(s)
+            for i in range(0, w.iterations):
+                tq.clear()
 
-            # Select and execute specified runner
-            match benchmark.run.runner:
-                case "py":
-                    benchmark.preRun()
-                    process = Process(
-                        target=pausedProc, args=(benchmark.run, sema, [w.run_args], {})
-                    )
-                case "make":
-                    process = Process(
-                        target=pausedProc,
-                        args=(
-                            runners.make,
-                            sema,
-                            [w.run_args],
-                            {
-                                "ncpu": ncpu,
-                                "envvar": benchmark.run.env,
-                                "rootdir": benchmark.files.rootdir,
-                                "silent": True,
-                            },
-                        ),
-                    )
-                case _:
-                    raise ValueError(
-                        f"Invalid benchmark runner specified for '{benchmark.name}'"
-                    )
+                # Select and execute specified runner
+                match benchmark.run.runner:
+                    case "py":
+                        benchmark.preRun()
+                        process = Process(
+                            target=pausedProc,
+                            args=(benchmark.run, sema, [w.run_args], {}),
+                        )
+                    case "make":
+                        process = Process(
+                            target=pausedProc,
+                            args=(
+                                runners.make,
+                                sema,
+                                [w.run_args],
+                                {
+                                    "ncpu": ncpu,
+                                    "envvar": benchmark.run.env,
+                                    "rootdir": benchmark.files.rootdir,
+                                    "silent": True,
+                                },
+                            ),
+                        )
+                    case _:
+                        raise ValueError(
+                            f"Invalid benchmark runner specified for '{benchmark.name}'"
+                        )
 
-            log.info(f"Running '{w.name}'")
+                log.info(f"Running '{w.name}', run #{i+1}")
 
-            sema.acquire()
-            process.start()
+                sema.acquire()
+                process.start()
 
-            # Sample sysctl before we start the process
-            for sysctl in diffSysctls:
-                sysctl.sample()
+                # Sample sysctl before we start the process
+                for sysctl in diffSysctls:
+                    sysctl.sample()
 
-            # Create threads for monitoring sysctls
-            if len(monitorSysctlsGrouped) != 0:
-                for k, v in monitorSysctlsGrouped.items():
-                    e = Event()
-                    t = Thread(
-                        target=samplingThread, args=(v, v[0].config.sampling_rate, e)
-                    )
-                    tq.append((t, e))
+                # Create threads for monitoring sysctls
+                if len(monitorSysctlsGrouped) != 0:
+                    for k, v in monitorSysctlsGrouped.items():
+                        e = Event()
+                        t = Thread(
+                            target=samplingThread,
+                            args=(v, v[0].config.sampling_rate, e),
+                        )
+                        tq.append((t, e))
 
-                for t, _ in tq:
-                    t.start()
+                    for t, _ in tq:
+                        t.start()
 
-            sema.release()
+                sema.release()
 
-            process.join()
+                process.join()
 
-            # Signal the monitoring threads to stop
-            if len(monitorSysctlsGrouped) != 0:
-                for _, e in tq:
-                    e.set()
+                # Signal the monitoring threads to stop
+                if len(monitorSysctlsGrouped) != 0:
+                    for _, e in tq:
+                        e.set()
 
-                for t, _ in tq:
-                    t.join()
+                    for t, _ in tq:
+                        t.join()
 
-            # Sample sysctl after the process finished
-            for sysctl in diffSysctls:
-                sysctl.sample()
+                # Sample sysctl after the process finished
+                for sysctl in diffSysctls:
+                    sysctl.sample()
 
-            # Save results
-            for sysctl in list(chain(diffSysctls, monitorSysctls)):
-                runResults["sysctl"][sysctl.config.oid] = sysctl.values.copy()
+                # Save results
+                for sysctl in list(chain(diffSysctls, monitorSysctls)):
+                    if sysctl.config.oid not in runResults["sysctl"]:
+                        runResults["sysctl"][sysctl.config.oid] = []
+                    runResults["sysctl"][sysctl.config.oid] += sysctl.values.copy()
 
-            results[w.name] = runResults
+                    sysctl.reset()
+
+        results[w.name] = runResults
 
         return results
