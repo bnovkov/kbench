@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import time
 import tomllib
 import cerberus
 import logging as log
@@ -93,7 +94,7 @@ class WorkloadRegistry:
             diffSysctls = MetricRegistry.getSysctls("diff")
             monitorSysctls = MetricRegistry.getSysctls("monitor")
             monitorSysctlsGrouped = {}
-            runResults = {"sysctl": {}, "dtrace": {}}
+            runResults = {}
 
             for s in monitorSysctls:
                 if s.config.sampling_rate not in monitorSysctlsGrouped:
@@ -102,6 +103,7 @@ class WorkloadRegistry:
                 monitorSysctlsGrouped[s.config.sampling_rate].append(s)
             for i in range(0, w.iterations):
                 tq.clear()
+                runResults[i] = {"sysctl": {}, "dtrace": {}}
 
                 # Select and execute specified runner
                 match benchmark.run.runner:
@@ -134,6 +136,7 @@ class WorkloadRegistry:
                 log.info(f"Running '{w.name}', run #{i+1}")
 
                 sema.acquire()
+
                 process.start()
 
                 # Sample sysctl before we start the process
@@ -152,10 +155,12 @@ class WorkloadRegistry:
 
                     for t, _ in tq:
                         t.start()
-
+                startTs = time.perf_counter()
                 sema.release()
 
                 process.join()
+                endTs = time.perf_counter()
+                runResults[i]["time"] = endTs - startTs
 
                 # Signal the monitoring threads to stop
                 if len(monitorSysctlsGrouped) != 0:
@@ -171,9 +176,9 @@ class WorkloadRegistry:
 
                 # Save results
                 for sysctl in list(chain(diffSysctls, monitorSysctls)):
-                    if sysctl.config.oid not in runResults["sysctl"]:
-                        runResults["sysctl"][sysctl.config.oid] = []
-                    runResults["sysctl"][sysctl.config.oid] += sysctl.values.copy()
+                    if sysctl.config.oid not in runResults[i]["sysctl"]:
+                        runResults[i]["sysctl"][sysctl.config.oid] = []
+                    runResults[i]["sysctl"][sysctl.config.oid] += sysctl.values.copy()
 
                     sysctl.reset()
 
