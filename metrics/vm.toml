@@ -1,6 +1,7 @@
-[[sysctl]]
-oid = "vm.pmap.pde.promotions"
-#mode = "diff"
-mode = "monitor"
-sampling_rate = 1000
+[[diff.ps]]
+command = "[compactdaemon]"
+stats = ["pcpu"]
 
+[[continuous.sysctl]]
+oid = "vm.pmap.pde.promotions"
+sampling_rate = 1000

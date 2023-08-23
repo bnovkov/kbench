@@ -11,6 +11,10 @@ import core.schemas.run_conf
 from util.structs import DictObj, DummyDict, ConfigDummyDict
 
 
+class Defaults:
+    samplingRate = 1000
+
+
 class RunConfig:
     defaultConfigPath = "config/default.toml"
 

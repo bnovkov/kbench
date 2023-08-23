@@ -1,9 +1,11 @@
+import json
 import ctypes
-import threading
+import subprocess
 import logging as log
 from ctypes.util import find_library
 
 libc = ctypes.CDLL(find_library("c"))
+libutil = ctypes.CDLL(find_library("util"))
 
 
 def sysctl(name: str, isString=False) -> str | int:
@@ -21,3 +23,20 @@ def sysctl(name: str, isString=False) -> str | int:
         return buf.raw.decode()
     else:
         return ctypes.cast(buf, ctypes.POINTER(ctypes.c_long)).contents.value
+
+
+def procInfo(name: str):
+    psDict = None
+    result = subprocess.run(
+        ["ps", "x", "--libxo", "json", "-o", "cputime,pid,command"],
+        stdout=subprocess.PIPE,
+    )
+
+    try:
+        psDict = json.loads(result.stdout)
+        for procInfo in psDict["process-information"]["process"]:
+            if procInfo["command"] == name:
+                return procInfo
+    except Exception as e:
+        log.exception(e, exc_info=True)
+        return None
