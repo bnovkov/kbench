@@ -51,7 +51,7 @@ try:
 
             # Add metadata
             results["uname"] = os.uname().version
-            
+
             with open(os.path.join("./results", resultFilename), "w") as file:
                 json.dump(results, file)
             log.info("Wrote benchmarking results to '%s'", resultFilename)

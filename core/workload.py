@@ -16,8 +16,6 @@ import util.os
 import util.runners as runners
 import core.schemas.workload_conf
 
-from util.structs import DictObj
-
 
 class Workload:
     def __init__(self, configPath: str) -> None:
@@ -25,17 +23,14 @@ class Workload:
             config = tomllib.load(file)
 
         v = cerberus.Validator(core.schemas.workload_conf.schema)
-
         if not v.validate(config):
             raise ValueError(f"invalid workload configuration: {v.errors}")
-
         config = v.normalized(config)
 
-        self.config = DictObj(**config["info"])
-        self.name = self.config.name
-        self.benchmark = self.config.benchmark
-        self.run_args = self.config.run_args
-        self.iterations = self.config.iterations
+        self.name = config["info"]["name"]
+        self.benchmark = config["info"]["benchmark"]
+        self.run_args = config["info"]["run_args"]
+        self.iterations = config["info"].get("iterations", 1)
 
 
 class WorkloadRegistry:
@@ -69,11 +64,11 @@ class WorkloadRegistry:
         ncpu = util.os.sysctl("hw.ncpu")
         log.debug(f"Number of CPUs: {ncpu}")
 
-        def pausedProc(target, sema, args, kwargs):
+        def pausedProc(runner, sema, args, kwargs):
             sema.acquire()
             f = open(os.devnull, "w")
             sys.stdout = f
-            target(*args, **kwargs)
+            runner.run(*args, silent=True)
             sema.release()
 
         results = {}
@@ -85,33 +80,11 @@ class WorkloadRegistry:
             for i in range(0, w.iterations):
                 runResults[i] = {}
 
-                # Select and execute specified runner
-                match benchmark.run.runner:
-                    case "py":
-                        benchmark.preRun()
-                        process = Process(
-                            target=pausedProc,
-                            args=(benchmark.run, sema, [w.run_args], {}),
-                        )
-                    case "make":
-                        process = Process(
-                            target=pausedProc,
-                            args=(
-                                runners.make,
-                                sema,
-                                [w.run_args],
-                                {
-                                    "ncpu": ncpu,
-                                    "envvar": benchmark.run.env,
-                                    "rootdir": benchmark.files.rootdir,
-                                    "silent": True,
-                                },
-                            ),
-                        )
-                    case _:
-                        raise ValueError(
-                            f"Invalid benchmark runner specified for '{benchmark.name}'"
-                        )
+                benchmark.preRun()
+                process = Process(
+                    target=pausedProc,
+                    args=(benchmark.runner, sema, [w.run_args], {}),
+                )
 
                 log.info(f"Running '{w.name}', run #{i+1}")
 

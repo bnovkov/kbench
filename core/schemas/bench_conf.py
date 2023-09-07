@@ -11,7 +11,6 @@ schema = {
         "required": False,
         "type": "dict",
         "schema": {
-            "rootdir": {"required": True, "type": "string"},
             "fetch": {
                 "required": False,
                 "type": "dict",
@@ -31,12 +30,19 @@ schema = {
         "required": True,
         "type": "dict",
         "schema": {
-            "runner": {"required": True, "type": "string"},
-            "tmpfiledir": {"required": False, "type": "string"},
-            "env": {
+            "make": {
                 "required": False,
                 "type": "dict",
-            },
+                "schema": {
+                    "rootdir": {"required": True, "type": "string"},
+                    "ncpu": {"required": False, "type": "integer"},
+                    "builddir": {"required": False, "type": "string"},
+                    "env": {
+                        "required": False,
+                        "type": "dict",
+                    },
+                },
+            }
         },
     },
 }

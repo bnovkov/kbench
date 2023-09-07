@@ -12,8 +12,6 @@ import core.config
 import core.schemas.metrics_conf
 import util.os
 
-from util.structs import DictObj
-
 
 class Metric:
     def __init__(self, configDict):
