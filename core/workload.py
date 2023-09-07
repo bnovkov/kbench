@@ -12,7 +12,6 @@ from typing import Dict, Set, List
 from core.benchmark import BenchmarkRegistry, BenchmarkBase
 from core.metric import MetricRegistry, SysctlMetric
 
-import util.os
 import util.runners as runners
 import core.schemas.workload_conf
 
@@ -60,9 +59,6 @@ class WorkloadRegistry:
         cwd = os.getcwd()
         func = None
         sema = Semaphore(1)
-
-        ncpu = util.os.sysctl("hw.ncpu")
-        log.debug(f"Number of CPUs: {ncpu}")
 
         def pausedProc(runner, sema, args, kwargs):
             sema.acquire()

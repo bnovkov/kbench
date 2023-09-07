@@ -24,9 +24,11 @@ class FetchSetupHandler(SetupHandler):
 
     def run(self):
         # Do not download if file is already present
+        # TODO: find a non-hacky way of checking whether the source is already present
         if os.path.isfile(self.path):
             log.info(f"Skipping setup for {self.path} - source files already present")
             return
+
         log.info(f"Downloading '{self.url}'")
         subprocess.run(["fetch", "-o", self.path, self.url], check=True)
 

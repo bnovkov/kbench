@@ -6,11 +6,11 @@ import logging as log
 
 from datetime import datetime
 
+
 from core.benchmark import BenchmarkRegistry
 from core.workload import WorkloadRegistry
 from core.metric import MetricRegistry
-
-from core.config import RunConfig
+from core.config import SysInfo, RunConfig
 
 coloredlogs.install(level="INFO")
 
@@ -29,6 +29,9 @@ args = parser.parse_args()
 
 if args.verbose:
     coloredlogs.install(level="DEBUG")
+
+log.debug("Collecting system info...")
+SysInfo.init()
 
 try:
     config = RunConfig(args)

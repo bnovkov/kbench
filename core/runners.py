@@ -3,11 +3,13 @@ import shutil
 import subprocess
 import logging as log
 
+from core.config import SysInfo
+
 
 class MakeRunner:
     def __init__(self, makeConfig, cwd):
         self.rootdir = os.path.join(cwd, makeConfig["rootdir"])
-        self.ncpu = makeConfig.get("ncpu", 1)
+        self.ncpu = makeConfig.get("ncpu", SysInfo.ncpu)
         self.envvar = makeConfig.get("env")
         self.builddir = None
         if "builddir" in makeConfig:

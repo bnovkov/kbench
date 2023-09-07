@@ -3,12 +3,19 @@ import tomllib
 import logging as log
 import cerberus
 
+import util.os
 import core.schemas.bench_conf
 import core.schemas.run_conf
 
 
 class Defaults:
     samplingRate = 1000
+
+
+class SysInfo:
+    def init():
+        SysInfo.ncpu = util.os.sysctl("hw.ncpu")
+        log.debug(f"Number of CPUs: {SysInfo.ncpu}")
 
 
 class RunConfig:
