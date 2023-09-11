@@ -1,7 +1,22 @@
-[[diff.ps]]
-command = "[compactdaemon]"
-stats = ["pcpu"]
+[[ps]]
+# Specifies which process to track
+command = "conky"
 
-[[continuous.sysctl]]
-oid = "vm.pmap.pde.promotions"
+# List of 'ps' metrics to track
+stats = ["time"]
+
+[[sysctl]]
+name = "vm"
+# Continously sample this sysctl while the workloads are running
 sampling_rate = 1000
+
+# List of oids to sample
+oids = [
+   "vm.pmap.pde.promotions"
+]
+
+[[dtrace]]
+name = "compaction"
+scripts = [
+{name = "no_relocations", src = "fbt::vm_compact_run:return { trace(arg1) }"}
+]

@@ -3,4 +3,4 @@ name = "buildkernel"
 description = "Builds the FreeBSD kernel"
 benchmark = "freebsd-src"
 run_args = "buildkernel"
-iterations = 10
+iterations = 1

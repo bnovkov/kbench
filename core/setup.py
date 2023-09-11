@@ -1,5 +1,6 @@
 import os
 import shutil
+import pathlib
 import subprocess
 
 import logging as log
@@ -7,7 +8,7 @@ import logging as log
 from abc import ABC, abstractmethod
 
 
-class SetupHandler(ABC):
+class SrcHandler(ABC):
     @abstractmethod
     def run(self):
         pass
@@ -17,23 +18,24 @@ class SetupHandler(ABC):
         pass
 
 
-class FetchSetupHandler(SetupHandler):
-    def __init__(self, filePath, url):
-        self.path = filePath
+class FetchSrcHandler(SrcHandler):
+    def __init__(self, url, cwd):
         self.url = url
+        self.filename = pathlib.Path(url).name
+
+        if not self.filename:
+            raise ValueError(
+                f"Invalid source url provided - unable to parse archive name from '{self.url}'"
+            )
 
     def run(self):
         # Do not download if file is already present
-        # TODO: find a non-hacky way of checking whether the source is already present
-        if os.path.isfile(self.path):
-            log.info(f"Skipping setup for {self.path} - source files already present")
-            return
+        if not os.path.isfile(self.filename):
+            log.info(f"Downloading '{self.url}'")
+            subprocess.run(["fetch", "-o", self.filename, self.url], check=True)
 
-        log.info(f"Downloading '{self.url}'")
-        subprocess.run(["fetch", "-o", self.path, self.url], check=True)
-
-        log.info(f"Unpacking file '{self.path}'")
-        shutil.unpack_archive(self.path)
+        log.info(f"Unpacking file '{self.filename}'")
+        shutil.unpack_archive(self.filename, "./src")
 
     def cleanup(self):
-        os.remove(self.path)
+        os.remove(self.filename)

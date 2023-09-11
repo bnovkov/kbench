@@ -8,7 +8,7 @@ from core.config import SysInfo
 
 class MakeRunner:
     def __init__(self, makeConfig, cwd):
-        self.rootdir = os.path.join(cwd, makeConfig["rootdir"])
+        self.rootdir = os.path.join(cwd, "src", makeConfig["rootdir"])
         self.ncpu = makeConfig.get("ncpu", SysInfo.ncpu)
         self.envvar = makeConfig.get("env")
         self.builddir = None
@@ -16,7 +16,7 @@ class MakeRunner:
             self.builddir = os.path.join(cwd, makeConfig["builddir"])
 
     def setup(self):
-        if not os.path.isdir(self.builddir):
+        if self.builddir and not os.path.isdir(self.builddir):
             log.info(f"Creating build directory '{self.builddir}'")
             os.makedirs(self.builddir)
 

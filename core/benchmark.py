@@ -45,16 +45,14 @@ class BenchmarkBase:
                 raise ValueError(f"'{self.name}': Unknown runner {runnerId} specified")
 
         # Add handler for fetching source files, if needed
-        self.fileHandler = None
-        match config["files"]:
-            case {"fetch": {"filename": fname, "url": url}}:
-                self.fileHandler = setup.FetchSetupHandler(
-                    os.path.join(cwd, fname), url
-                )
+        self.srcFileHandler = None
+        match config["src"]:
+            case {"fetch": {"url": url}}:
+                self.srcFileHandler = setup.FetchSrcHandler(url, cwd)
 
             # TODO: point for adding future file handlers
 
-        if self.fileHandler == None:
+        if self.srcFileHandler == None:
             raise ValueError(f"'{self.name}': No setup procedure was specified")
 
         log.info("Loaded benchmark info for '%s'", self.name)
@@ -100,8 +98,12 @@ class BenchmarkRegistry:
             os.chdir(benchmark.path)
 
             # Setup source files, if neccessary
-            if benchmark.fileHandler:
-                benchmark.fileHandler.run()
+            if benchmark.srcFileHandler:
+                if not os.path.isdir("./src"):
+                    os.mkdir("./src")
+                if len(os.listdir("./src")) == 0:
+                    log.info("Fetching source files for '%s'", self.name)
+                    benchmark.srcFileHandler.run()
 
             # Run the runner's setup
             benchmark.runner.setup()

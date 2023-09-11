@@ -1,5 +1,6 @@
 import tomllib
 import cerberus
+import datetime
 import logging as log
 
 
@@ -34,20 +35,27 @@ class Metric:
 class SysctlMetric(Metric):
     def __init__(self, configDict) -> None:
         super().__init__(configDict)
-        self.values: List[int] = list()
-        self.oid = configDict["oid"]
+        self.values: Dict[str, List[int]] = {}
+        self.oids = configDict["oids"]
+        self.name = configDict["name"]
 
-        log.debug(f"Registered sysctl metric: '{self.oid}'")
+        for oid in self.oids:
+            self.values[oid] = []
+
+        log.debug(f"Registered sysctl metric group: '{self.name}'")
 
     def sample(self):
-        self.values.append(util.os.sysctl(self.oid))
-        log.debug(f"Sampled sysctl '{self.oid}'")
+        for oid in self.oids:
+            self.values[oid].append(util.os.sysctl(oid))
+            log.debug(f"Sampled sysctl '{oid}'")
 
     def getResults(self, resultsDict):
-        resultsDict["sysctl"][self.oid] = self.values.copy()
+        for oid in self.oids:
+            resultsDict["sysctl"][oid] = self.values[oid].copy()
 
     def reset(self):
-        self.values.clear()
+        for oid in self.oids:
+            self.values[oid].clear()
 
     def getName(self):
         return "sysctl"
@@ -55,7 +63,7 @@ class SysctlMetric(Metric):
 
 class PsMetric(Metric):
     supportedStats: List[str] = {
-        "pcpu",
+        "time",
     }
 
     def __init__(self, configDict) -> None:
@@ -75,22 +83,27 @@ class PsMetric(Metric):
             f"Registered 'ps' metric for process '{self.cmd}' - tracking '{self.stats}'"
         )
 
-    def sample(self):
+    def sample(self) -> None:
         procDict = util.os.procInfo(self.cmd)
         if procDict:
             for stat in self.stats:
                 match stat:
-                    case "pcpu":
-                        self.valueDict[stat].append(float(procDict[stat]))
+                    case "time":
+                        cpuTimeTimestamp = datetime.datetime.strptime(
+                            procDict["cpu-time"], "%M:%S.%f"
+                        ).timestamp()
+                        self.valueDict[stat].append(cpuTimeTimestamp)
             log.debug(f"Sampled ps metric for '{self.cmd}'")
         else:
             log.warn(f"Unable to fetch process info for '{self.cmd}'")
 
-    def getResults(self, resultsDict):
-        for stat in self.stats:
-            resultsDict["ps"][stat] = self.valueDict[stat].copy()
+    def getResults(self, resultsDict) -> None:
+        resultsDict["ps"][self.cmd] = {}
 
-    def reset(self):
+        for stat in self.stats:
+            resultsDict["ps"][self.cmd][stat] = self.valueDict[stat].copy()
+
+    def reset(self) -> None:
         for stat in self.stats:
             self.valueDict[stat].clear()
 
@@ -112,30 +125,25 @@ class MetricRegistry:
         if not v.validate(metricsConfig):
             raise ValueError(f"invalid metrics configuration file: {v.errors}")
 
-        for metricsDict in metricsConfig["diff"]:
-            if "sysctl" in metricsConfig["diff"]:
-                MetricRegistry.diffMetrics += [
-                    SysctlMetric(x) for x in metricsConfig["diff"]["sysctl"]
-                ]
-            if "ps" in metricsConfig["diff"]:
-                MetricRegistry.diffMetrics += [
-                    PsMetric(x) for x in metricsConfig["diff"]["ps"]
-                ]
+        for metricClass, metricDicts in metricsConfig.items():
+            ctor = None
+            match metricClass:
+                case "sysctl":
+                    ctor = SysctlMetric
+                case "ps":
+                    ctor = PsMetric
+                case "dtrace":
+                    continue
 
-        for metricsDict in metricsConfig["continuous"]:
-            # TODO: reduce verbosity somehow
-            if "sysctl" in metricsConfig["continuous"]:
-                for x in metricsConfig["continuous"]["sysctl"]:
-                    m = SysctlMetric(x)
-                    if m.sampling_rate not in MetricRegistry.continuousMetrics:
-                        MetricRegistry.continuousMetrics[m.sampling_rate] = []
-                    MetricRegistry.continuousMetrics[m.sampling_rate].append(m)
-            if "ps" in metricsConfig["continuous"]:
-                for x in metricsConfig["continuous"]["ps"]:
-                    m = PsMetric(x)
-                    if m.sampling_rate not in MetricRegistry.continuousMetrics:
-                        MetricRegistry.continuousMetrics[m.sampling_rate] = []
-                    MetricRegistry.continuousMetrics[m.sampling_rate].append(m)
+            for metricDict in metricDicts:
+                m = ctor(metricDict)
+                if "sampling_rate" in metricDict:
+                    sampling_rate = metricDict["sampling_rate"]
+                    if sampling_rate not in MetricRegistry.continuousMetrics:
+                        MetricRegistry.continuousMetrics[sampling_rate] = []
+                    MetricRegistry.continuousMetrics[sampling_rate].append(m)
+                else:
+                    MetricRegistry.diffMetrics.append(m)
 
     @staticmethod
     def sampleDiffMetrics():
@@ -187,4 +195,5 @@ class MetricRegistry:
             for m in metricsList:
                 m.getResults(results)
                 m.reset()
+
         return results

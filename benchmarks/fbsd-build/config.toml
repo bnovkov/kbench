@@ -1,17 +1,12 @@
+# Basic info block
 [info]
 name = "freebsd-src"
 description = "Benchmarking buildworld and buildkernel"
 
-[files]
-[files.fetch]
-filename = "src.txz"
+# Specify where to fetch the benchmark's source files, if any
+[src.fetch]
 url = "https://download.freebsd.org/ftp/releases/amd64/13.1-RELEASE/src.txz"
 
-
-[run]
+# Specify how to run the benchmark using make
 [run.make]
 rootdir = "usr/src"
-# ncpu = 2
-builddir = "build"
-# TODO: find a way to avoid hardcoding a path
-env = { "MAKEOBJDIRPREFIX" = "/home/bojan/Documents/projects/kbench/benchmarks/fbsd-build/build" }

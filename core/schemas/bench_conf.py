@@ -7,7 +7,7 @@ schema = {
             "description": {"required": True, "type": "string"},
         },
     },
-    "files": {
+    "src": {
         "required": False,
         "type": "dict",
         "schema": {
@@ -15,7 +15,6 @@ schema = {
                 "required": False,
                 "type": "dict",
                 "schema": {
-                    "filename": {"required": True, "type": "string"},
                     "url": {"required": True, "type": "string"},
                 },
             },
