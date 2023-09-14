@@ -10,8 +10,8 @@ It fetches and runs a set of well-known benchmarks, tracks various system metric
 To come.
 
 # Contributing
-`kbench` is currently in a very early development phase and development is currently focused on adding new benchmarks and metrics. 
+`kbench` is currently bare bones and development is currently focused on adding new benchmarks and metrics. 
 You are very welcome to share your way of benchmarking and testing FreeBSD kernel patches by opening an issue or contacting the maintainer.
 When opening an issue or contacting the maintainer, please include the following information:
-1. A list of benchmarks you use (including an URL to the source files, if possible)
+1. A list of benchmarks you use (including an URL to the source files if necessary),
 2. A list of metrics you track when benchmarking.
