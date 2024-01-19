@@ -28,9 +28,12 @@ class Workload:
 
         self.name = config["info"]["name"]
         self.benchmark = config["info"]["benchmark"]
-        self.run_args = config["info"]["run_args"]
         self.iterations = config["info"].get("iterations", 1)
+        self.run_args = config["info"]["run_args"]
+        if "cmdname" in config["info"]:
+            self.run_args = config["info"]["cmdname"]+ " " + self.run_args
 
+        self.run_args = self.run_args.split(" ")
 
 class WorkloadRegistry:
     workloads: Dict[str, Workload] = dict()
@@ -41,6 +44,7 @@ class WorkloadRegistry:
         loadedBenchmarks = BenchmarkRegistry.getLoadedBenchmarkNames()
 
         for file in glob.glob(os.path.join(workloadDirPath, "*.toml")):
+            log.debug(f"Processing workload file {file}")
             w = Workload(file)
 
             # Check if benchmark specified by workload exists

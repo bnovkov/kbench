@@ -11,6 +11,7 @@ from jinja2 import Template
 import core
 import core.setup as setup
 from core import runners
+from util.os import pushd
 
 
 class BenchmarkBase:
@@ -22,7 +23,7 @@ class BenchmarkBase:
 
     def __init__(self, cwd) -> None:
         cwd = os.path.abspath(cwd)
-
+        log.debug(f"Processing {cwd}")
         # Process the configuration file
         config = None
         with open(os.path.join(cwd, "config.toml")) as file:
@@ -30,30 +31,35 @@ class BenchmarkBase:
 
         v = cerberus.Validator(core.schemas.bench_conf.schema)
         if not v.validate(config):
-            raise ValueError(f"invalid benchmark configuration: {v.errors}")
-
+            raise ValueError(f"{cwd}: invalid benchmark configuration: {v.errors}")
+        config = v.normalized(config)
+        print(config)
         # Populate basic benchmark info
         self.path = cwd
         self.name = config["info"]["name"]
         self.desc = config["info"]["description"]
+        self.prebuilt = config["info"]["prebuilt"]
 
         # Process runner block
         match config["run"]:
             case {"make": _}:
                 self.runner = runners.MakeRunner(config["run"]["make"], cwd)
+            case {"exec": _}:
+                self.runner = runners.ExecRunner(config["run"]["exec"], cwd)
             case _:
-                raise ValueError(f"'{self.name}': Unknown runner {runnerId} specified")
+                raise ValueError(f"'{self.name}': Unknown runner {config['run']} specified")
 
-        # Add handler for fetching source files, if needed
-        self.srcFileHandler = None
-        match config["src"]:
-            case {"fetch": {"url": url}}:
-                self.srcFileHandler = setup.FetchSrcHandler(url, cwd)
+        if not self.prebuilt:
+            # Add handler for fetching source files, if needed
+            self.srcFileHandler = None
+            match config["src"]:
+                case {"fetch": {"url": url}}:
+                    self.srcFileHandler = setup.FetchSrcHandler(url, cwd)
+                case {"git": {"url": url}}:
+                    self.srcFileHandler = setup.GitSrcHandler(url, cwd)
 
-            # TODO: point for adding future file handlers
-
-        if self.srcFileHandler == None:
-            raise ValueError(f"'{self.name}': No setup procedure was specified")
+            if self.srcFileHandler == None:
+                raise ValueError(f"'{self.name}': No setup procedure was specified")
 
         log.info("Loaded benchmark info for '%s'", self.name)
 
@@ -91,21 +97,18 @@ class BenchmarkRegistry:
 
     @staticmethod
     def buildBenchmarks(benchmarkSet=None):
-        oldcwd = os.getcwd()
         for benchmark in BenchmarkRegistry.registry.values():
             if benchmarkSet and benchmark.name not in benchmarkSet:
                 continue
-            os.chdir(benchmark.path)
+            with pushd(benchmark.path):
+                # Setup source files, if neccessary
+                if not benchmark.prebuilt and benchmark.srcFileHandler:
+                    if not os.path.isdir("./src"):
+                        os.mkdir("./src")
+                    if len(os.listdir("./src")) == 0:
+                        log.info("Fetching source files for '%s'", benchmark.name)
+                        benchmark.srcFileHandler.run()
 
-            # Setup source files, if neccessary
-            if benchmark.srcFileHandler:
-                if not os.path.isdir("./src"):
-                    os.mkdir("./src")
-                if len(os.listdir("./src")) == 0:
-                    log.info("Fetching source files for '%s'", self.name)
-                    benchmark.srcFileHandler.run()
+                # Run the runner's setup
+                benchmark.runner.setup()
 
-            # Run the runner's setup
-            benchmark.runner.setup()
-
-        os.chdir(oldcwd)

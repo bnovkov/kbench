@@ -2,6 +2,9 @@ import json
 import ctypes
 import subprocess
 import logging as log
+import contextlib
+import os
+
 from ctypes.util import find_library
 
 libc = ctypes.CDLL(find_library("c"))
@@ -40,3 +43,12 @@ def procInfo(name: str):
     except Exception as e:
         log.exception(e, exc_info=True)
         return None
+
+@contextlib.contextmanager
+def pushd(dir):
+    curdir = os.getcwd()
+    os.chdir(dir)
+    try:
+        yield
+    finally:
+        os.chdir(curdir)

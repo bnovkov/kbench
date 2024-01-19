@@ -1,0 +1,8 @@
+[info]
+name = "freqmine"
+description = "Runs the 'freqmine' benchmark from the PARSEC benchmarking suite"
+benchmark = "PARSEC"
+cmdname = "freqmine"
+# exec_pre = "./bin/frag <level>"
+run_args = "./inputs/webdocs_250k.dat 11000"
+iterations = 1

@@ -5,6 +5,7 @@ schema = {
         "schema": {
             "name": {"required": True, "type": "string"},
             "description": {"required": True, "type": "string"},
+            "prebuilt": {"required": False, "type": "boolean", "default" : False},
         },
     },
     "src": {
@@ -18,12 +19,21 @@ schema = {
                     "url": {"required": True, "type": "string"},
                 },
             },
+            "git": {
+                "required": False,
+                "type": "dict",
+                "schema": {
+                    "url": {"required": True, "type": "string"},
+                },
+            },
+
         },
     },
     "setup": {
         "required": False,
         "type": "dict",
-        "schema": {"builddir": {"required": False, "type": "string"}},
+        "schema": {"builddir": {"required": False, "type": "string"},
+                   "buildcmd": {"required": True, "type": "string"}},
     },
     "run": {
         "required": True,
@@ -40,6 +50,13 @@ schema = {
                         "required": False,
                         "type": "dict",
                     },
+                },
+            },
+            "exec": {
+                "required": False,
+                "type": "dict",
+                "schema": {
+                    "cmds": {"required": True, "type": "list"},
                 },
             }
         },

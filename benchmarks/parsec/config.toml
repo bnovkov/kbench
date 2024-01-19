@@ -1,0 +1,8 @@
+# Basic info block
+[info]
+name = "PARSEC"
+description = "PARSEC benchmarking suite"
+prebuilt = true # Skip build steps
+
+[run.exec]
+cmds = ["canneal", "freqmine"]

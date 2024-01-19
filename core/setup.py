@@ -39,3 +39,16 @@ class FetchSrcHandler(SrcHandler):
 
     def cleanup(self):
         os.remove(self.filename)
+
+class GitSrcHandler(SrcHandler):
+    def __init__(self, url, cwd):
+        self.url = url
+        self.repo_dir = pathlib.Path(url).name
+
+    def run(self):
+        # TODO: use rev-parse to check if repo exists
+        log.info(f"Cloning repo '{self.url}'")
+        subprocess.run(["git", "clone", self.url, repo_dir], check=True)
+
+    def cleanup(self):
+        os.remove(self.repo_dir)

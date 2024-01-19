@@ -1,0 +1,16 @@
+# Basic info block
+[info]
+name = "gups"
+description = "HPCC RandomAccess (GUPS) benchmark."
+prebuilt = true
+
+# Specify where to fetch the benchmark's source files, if any
+[src.git]
+url = "https://github.com/bnovkov/gups"
+
+[setup]
+buildcmd = "make"
+
+# Specify how to run the benchmark
+[run.exec]
+cmds = [ "gups.x" ]

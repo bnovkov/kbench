@@ -1,0 +1,8 @@
+[info]
+name = "canneal"
+description = "Runs the 'canneal' benchmark from the PARSEC benchmarking suite"
+benchmark = "PARSEC"
+cmdname = "canneal"
+#exec_pre = "./bin/frag <level>"
+run_args = "8 15000 2000 ./inputs/2500000.nets 6000"
+iterations = 1

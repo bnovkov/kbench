@@ -197,3 +197,4 @@ class MetricRegistry:
                 m.reset()
 
         return results
+

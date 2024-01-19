@@ -1,6 +1,6 @@
 [[ps]]
 # Specifies which process to track
-command = "conky"
+command = "compactd"
 
 # List of 'ps' metrics to track
 stats = ["time"]

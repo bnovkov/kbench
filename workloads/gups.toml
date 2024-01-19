@@ -1,0 +1,7 @@
+[info]
+name = "gups"
+description = "Runs the gups_serial benchmark"
+benchmark = "gups"
+cmdname = "gups.x"
+run_args = "30 4194304 1024"
+iterations = 1
